@@ -44,10 +44,8 @@ public class Cell {
         return row == objC.row && col == objC.col;
     }
 
-
     @Override
     public int hashCode(){
         return Objects.hash(row,col);
     }
-    
 }

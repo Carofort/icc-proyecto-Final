@@ -1,6 +1,8 @@
 package view;
 
 import javax.swing.*;
+import java.util.List;
+import java.util.stream.Collectors;
 import controllers.BFSController;
 import controllers.DFSController;
 import controllers.DPController;
@@ -13,18 +15,20 @@ import java.awt.event.ActionListener;
 
 public class MazeView extends JFrame {
     private JTextField txtAncho, txtAlto;
-    private JButton btnGenerar, btnBFS, btnDFS, btnRecursivo, btnDP, btnInicio, btnFin, btnReiniciar;
+    private JButton btnGenerar, btnBFS, btnDFS, btnRecursivo, btnDP, btnInicio, btnFin, btnReiniciar, btnModoRapido, btnComparar;
     private JPanel panelGrid, panelBotones;
     private JButton[][] gridButtons;
     private int ancho, alto;
     private boolean seleccionandoInicio = false;
     private boolean seleccionandoFin = false;
+    private boolean modoRapido = false;
     private Point inicio = null;
     private Point fin = null;
 
     public MazeView() {
         setTitle("Laberinto");
-        setSize(800, 600);
+        setSize(1000, 600);
+        setLocationRelativeTo(null);
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         setLayout(new BorderLayout());
 
@@ -35,6 +39,7 @@ public class MazeView extends JFrame {
         btnInicio = new JButton("Seleccionar Inicio");
         btnFin = new JButton("Seleccionar Fin");
         btnReiniciar = new JButton("Reiniciar");
+        btnModoRapido = new JButton("Modo Rápido: OFF");
 
         panelControl.add(new JLabel("Ancho:"));
         panelControl.add(txtAncho);
@@ -44,6 +49,9 @@ public class MazeView extends JFrame {
         panelControl.add(btnInicio);
         panelControl.add(btnFin);
         panelControl.add(btnReiniciar);
+        panelControl.add(btnModoRapido);
+
+        panelControl.setBackground(new Color(176, 217, 250));
 
         add(panelControl, BorderLayout.NORTH);
         panelGrid = new JPanel();
@@ -54,24 +62,35 @@ public class MazeView extends JFrame {
         btnDFS = new JButton("Resolver DFS");
         btnRecursivo = new JButton("Resolver Recursivo");
         btnDP = new JButton("Resolver DP");
+        btnComparar = new JButton("Comparar Métodos");
 
         panelBotones.add(btnBFS);
         panelBotones.add(btnDFS);
         panelBotones.add(btnRecursivo);
         panelBotones.add(btnDP);
+        panelBotones.add(btnComparar);
+
+        panelBotones.setBackground(new Color(176, 217, 250));
 
         add(panelBotones, BorderLayout.SOUTH);
 
+        txtAncho.addActionListener(e -> txtAlto.requestFocus());
+        txtAlto.addActionListener(e -> {
+            btnGenerar.requestFocus();  
+            btnGenerar.doClick();        
+        });
         btnGenerar.addActionListener(e -> generarLaberinto());
         btnInicio.addActionListener(e -> seleccionandoInicio = true);
         btnFin.addActionListener(e -> seleccionandoFin = true);
         btnReiniciar.addActionListener(e -> reiniciarLaberinto());
+        btnModoRapido.addActionListener(e -> cambiarModoRapido());
 
         // Corrección de llamadas a los controladores
         btnBFS.addActionListener(e -> resolverLaberinto(new BFSController()));
         btnDFS.addActionListener(e -> resolverLaberinto(new DFSController()));
         btnDP.addActionListener(e -> resolverLaberinto(new DPController()));
         btnRecursivo.addActionListener(e -> resolverLaberinto(new RecursiveController()));
+        btnComparar.addActionListener(e -> compararMetodos());
     }
 
     private void generarLaberinto() {
@@ -83,7 +102,7 @@ public class MazeView extends JFrame {
                 return;
             }
         } catch (NumberFormatException ex) {
-            JOptionPane.showMessageDialog(this, "Ingrese valores numéricos válidos", "Error", JOptionPane.ERROR_MESSAGE);
+            JOptionPane.showMessageDialog(this, "Ingrese valores entre 1 y 50", "Error", JOptionPane.ERROR_MESSAGE);
             return;
         }
 
@@ -118,6 +137,11 @@ public class MazeView extends JFrame {
         seleccionandoFin = false;
     }
 
+    private void cambiarModoRapido() {
+        modoRapido = !modoRapido;
+        btnModoRapido.setText("Modo Rápido: " + (modoRapido ? "ON" : "OFF"));
+    }
+
     private class ButtonClickListener implements ActionListener {
         private int row, col;
 
@@ -134,14 +158,14 @@ public class MazeView extends JFrame {
                     gridButtons[inicio.x][inicio.y].setBackground(Color.WHITE);
                 }
                 inicio = new Point(row, col);
-                btn.setBackground(Color.PINK);
+                btn.setBackground(new Color(92, 64, 207));
                 seleccionandoInicio = false;
             } else if (seleccionandoFin) {
                 if (fin != null) {
                     gridButtons[fin.x][fin.y].setBackground(Color.WHITE);
                 }
                 fin = new Point(row, col);
-                btn.setBackground(Color.MAGENTA);
+                btn.setBackground(new Color(76, 64, 122));
                 seleccionandoFin = false;
             } else {
                 btn.setBackground(btn.getBackground() == Color.BLACK ? Color.WHITE : Color.BLACK);
@@ -155,20 +179,62 @@ public class MazeView extends JFrame {
             JOptionPane.showMessageDialog(this, "Seleccione inicio y fin antes de resolver.", "Error", JOptionPane.ERROR_MESSAGE);
             return;
         }
-
+    
         boolean[][] grid = convertirGridABoolean(gridButtons);
         Maze maze = new Maze(grid);
         Cell startCell = new Cell(inicio.x, inicio.y);
         Cell endCell = new Cell(fin.x, fin.y);
-
-        if (solver instanceof BFSController) {
-            ((BFSController) solver).getPath(maze, grid, startCell, endCell);
-        } else if (solver instanceof DFSController) {
-            ((DFSController) solver).getPath(maze, grid, startCell, endCell);
-        } else if (solver instanceof DPController) {
-            ((DPController) solver).getPath(maze, grid, startCell, endCell);
-        }
+    
+        new Thread(() -> {
+            long startTime = System.nanoTime();
+            List<Cell> visitados = null;
+            List<Cell> camino = null;
+    
+            if (solver instanceof BFSController) {
+                visitados = ((BFSController) solver).getVisitedNodes();
+                camino = ((BFSController) solver).getPath(maze, grid, startCell, endCell);
+            } else if (solver instanceof DFSController) {
+                camino = ((DFSController) solver).getPath(maze, grid, startCell, endCell);
+            } else if (solver instanceof DPController) {
+                visitados = ((DPController) solver).getVisitedNodes();
+                camino = ((DPController) solver).getPath(maze, grid, startCell, endCell);
+            } else if (solver instanceof RecursiveController) {
+                visitados = ((RecursiveController) solver).getVisitedNodes();
+                camino = ((RecursiveController) solver).getPath(maze, grid, startCell, endCell);
+            }
+    
+            if (visitados != null) {
+                for (Cell c : visitados) {
+                    if (!camino.contains(c)) {
+                        try {
+                            int delay = modoRapido ? 0 : 100; 
+                            Thread.sleep(delay);  
+                            gridButtons[c.row][c.col].setBackground(new Color(207, 55, 73));
+                        } catch (InterruptedException e) {
+                            e.printStackTrace();
+                        }
+                    }
+                }
+            }
+            long endTime = System.nanoTime();
+            long duration = (endTime - startTime) / 1_000_000;
+    
+            if (camino != null) {
+                List<Point> puntos = camino.stream().map(cell -> new Point(cell.getRow(), cell.getCol())).collect(Collectors.toList());
+    
+                for (Point p : puntos) {
+                    try {
+                        int delay = modoRapido ? 0 : 200;  
+                        Thread.sleep(delay); 
+                        gridButtons[p.x][p.y].setBackground(new Color(53, 207, 87));
+                    } catch (InterruptedException e) {
+                        e.printStackTrace();
+                    }
+                }
+            }
+        }).start();
     }
+    
 
     // Método para convertir la matriz de botones en una matriz booleana
     private boolean[][] convertirGridABoolean(JButton[][] gridButtons) {
@@ -178,9 +244,43 @@ public class MazeView extends JFrame {
 
         for (int i = 0; i < filas; i++) {
             for (int j = 0; j < columnas; j++) {
-                grid[i][j] = gridButtons[i][j].getBackground() != Color.BLACK; // Negro es muro, otro color es camino
+                grid[i][j] = gridButtons[i][j].getBackground() != Color.BLACK; 
             }
         }
         return grid;
+    }
+
+    private void compararMetodos() {
+        if (inicio == null || fin == null || gridButtons == null) {
+            JOptionPane.showMessageDialog(this, "Seleccione inicio y fin antes de comparar.", "Error", JOptionPane.ERROR_MESSAGE);
+            return;
+        }
+
+        boolean[][] grid = convertirGridABoolean(gridButtons);
+        Maze maze = new Maze(grid);
+        Cell startCell = new Cell(inicio.x, inicio.y);
+        Cell endCell = new Cell(fin.x, fin.y);
+
+        Object[] controllers = {new BFSController(), new DFSController(), new DPController(), new RecursiveController()};
+        String[] metodos = {"BFS", "DFS", "DP", "Recursivo"};
+        StringBuilder resultado = new StringBuilder();
+
+        for (int i = 0; i < controllers.length; i++) {
+            long startTime = System.nanoTime();
+            java.util.List<Cell> path = ((controllers[i] instanceof BFSController) ? ((BFSController) controllers[i]).getPath(maze, grid, startCell, endCell) :
+                                         (controllers[i] instanceof DFSController) ? ((DFSController) controllers[i]).getPath(maze, grid, startCell, endCell) :
+                                         (controllers[i] instanceof DPController) ? ((DPController) controllers[i]).getPath(maze, grid, startCell, endCell) :
+                                         ((RecursiveController) controllers[i]).getPath(maze, grid, startCell, endCell));
+            long endTime = System.nanoTime();
+            long duration = (endTime - startTime) / 1_000_000;
+
+            if (path != null) {
+                resultado.append(metodos[i]).append(" encontró el camino en ").append(duration).append(" ms y ").append(path.size()).append(" pasos.\n");
+            } else {
+                resultado.append(metodos[i]).append(" no encontró un camino.\n");
+            }
+        }
+
+        JOptionPane.showMessageDialog(this, resultado.toString(), "Comparación de Métodos", JOptionPane.INFORMATION_MESSAGE);
     }
 }
