@@ -2,7 +2,6 @@ package view;
 
 import javax.swing.*;
 import java.util.List;
-import java.util.stream.Collectors;
 import controllers.BFSController;
 import controllers.DFSController;
 import controllers.DPController;
@@ -205,33 +204,33 @@ public class MazeView extends JFrame {
     
             if (visitados != null) {
                 for (Cell c : visitados) {
-                    if (!camino.contains(c)) {
-                        try {
-                            int delay = modoRapido ? 0 : 100; 
-                            Thread.sleep(delay);  
-                            gridButtons[c.row][c.col].setBackground(new Color(207, 55, 73));
-                        } catch (InterruptedException e) {
-                            e.printStackTrace();
-                        }
-                    }
-                }
-            }
-            long endTime = System.nanoTime();
-            long duration = (endTime - startTime) / 1_000_000;
-    
-            if (camino != null) {
-                List<Point> puntos = camino.stream().map(cell -> new Point(cell.getRow(), cell.getCol())).collect(Collectors.toList());
-    
-                for (Point p : puntos) {
+                    int delay = modoRapido ? 0 : 100;
                     try {
-                        int delay = modoRapido ? 0 : 200;  
-                        Thread.sleep(delay); 
-                        gridButtons[p.x][p.y].setBackground(new Color(53, 207, 87));
+                        Thread.sleep(delay);
                     } catch (InterruptedException e) {
                         e.printStackTrace();
                     }
+                    SwingUtilities.invokeLater(() -> gridButtons[c.row][c.col].setBackground(new Color(207, 55, 73)));
                 }
             }
+            
+            long endTime = System.nanoTime();
+            long duration = (endTime - startTime) / 1_000_000;
+            
+            if (camino == null || camino.isEmpty()) {
+                JOptionPane.showMessageDialog(this, "No hay camino posible.", "Resultado", JOptionPane.WARNING_MESSAGE);
+            } else {
+                for (Cell c : camino) {
+                    int delay = modoRapido ? 0 : 200;
+                    try {
+                        Thread.sleep(delay);
+                    } catch (InterruptedException e) {
+                        e.printStackTrace();
+                    }
+                    SwingUtilities.invokeLater(() -> gridButtons[c.row][c.col].setBackground(new Color(53, 207, 87)));
+                }
+            }
+            
         }).start();
     }
     
@@ -267,7 +266,7 @@ public class MazeView extends JFrame {
 
         for (int i = 0; i < controllers.length; i++) {
             long startTime = System.nanoTime();
-            java.util.List<Cell> path = ((controllers[i] instanceof BFSController) ? ((BFSController) controllers[i]).getPath(maze, grid, startCell, endCell) :
+            List<Cell> path = ((controllers[i] instanceof BFSController) ? ((BFSController) controllers[i]).getPath(maze, grid, startCell, endCell) :
                                          (controllers[i] instanceof DFSController) ? ((DFSController) controllers[i]).getPath(maze, grid, startCell, endCell) :
                                          (controllers[i] instanceof DPController) ? ((DPController) controllers[i]).getPath(maze, grid, startCell, endCell) :
                                          ((RecursiveController) controllers[i]).getPath(maze, grid, startCell, endCell));
@@ -283,4 +282,5 @@ public class MazeView extends JFrame {
 
         JOptionPane.showMessageDialog(this, resultado.toString(), "Comparación de Métodos", JOptionPane.INFORMATION_MESSAGE);
     }
+    
 }

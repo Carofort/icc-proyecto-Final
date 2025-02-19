@@ -26,7 +26,7 @@ public class BFSController implements MazeSolver {
 
         while (!queue.isEmpty()) {
             Cell current = queue.poll();
-
+            visitedNodes.add(current);
             
             if (current.equals(end)) {
                 while (current != null) {
@@ -50,7 +50,7 @@ public class BFSController implements MazeSolver {
             }
         }
 
-        return path; 
+        return null; 
     }
 
     public List<Cell> getVisitedNodes() {

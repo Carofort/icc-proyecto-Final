@@ -38,7 +38,7 @@ public class RecursiveController implements MazeSolver {
 
         visitadas.add(cell);
         visitedNodes.add(cell);
-        maze.updateMaze(cell, path.isEmpty() ? null : path.get(path.size() - 1), end); // Actualizar laberinto
+        maze.updateMaze(cell, path.isEmpty() ? null : path.get(path.size() - 1), end);
 
         if (row == end.row && col == end.col) {
             path.add(cell);
